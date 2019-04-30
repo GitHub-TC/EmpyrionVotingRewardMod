@@ -1,8 +1,7 @@
 ﻿using Eleon.Modding;
 using EmpyrionNetAPIAccess;
-using EmpyrionNetAPIDefinitions;
 using EmpyrionNetAPITools;
-using System;
+using EmpyrionNetAPIDefinitions;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -124,8 +123,10 @@ namespace VotingRewardMod
 
         private void LoadConfiuration()
         {
-            Configuration = new ConfigurationManager<RewardModConfiguration>() { UseJSON = true };
-            Configuration.ConfigFilename = Path.Combine(EmpyrionConfiguration.SaveGameModPath, @"Configuration.json");
+            Configuration = new ConfigurationManager<RewardModConfiguration>
+            {
+                ConfigFilename = Path.Combine(EmpyrionConfiguration.SaveGameModPath, @"Configuration.json")
+            };
 
             var DemoInit = !File.Exists(Configuration.ConfigFilename);
 
