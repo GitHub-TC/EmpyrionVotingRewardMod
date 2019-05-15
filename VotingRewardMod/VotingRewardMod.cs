@@ -24,15 +24,14 @@ namespace VotingRewardMod
         public override void Initialize(ModGameAPI dediAPI)
         {
             DediAPI  = dediAPI;
-            verbose  = true;
             LogLevel = LogLevel.Message;
 
             log($"**VotingRewardMod: loaded");
 
             LoadConfiuration();
 
-            ChatCommands.Add(new ChatCommand(@"/votereward",  (I, A) => VoteReward(I, A), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
-            ChatCommands.Add(new ChatCommand(@"/vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
+            ChatCommands.Add(new ChatCommand(@"\\votereward",  (I, A) => VoteReward(I, A), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
+            ChatCommands.Add(new ChatCommand(@"\\vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
         }
 
         private async Task DisplayHelp(ChatInfo chatInfo)
