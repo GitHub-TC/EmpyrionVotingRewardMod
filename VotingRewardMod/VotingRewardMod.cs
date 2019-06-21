@@ -29,9 +29,11 @@ namespace VotingRewardMod
             log($"**VotingRewardMod: loaded");
 
             LoadConfiuration();
+            LogLevel = Configuration.Current.LogLevel;
+            ChatCommandManager.CommandPrefix = Configuration.Current.CommandPrefix;
 
-            ChatCommands.Add(new ChatCommand(@"\\votereward",  (I, A) => VoteReward(I, A), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
-            ChatCommands.Add(new ChatCommand(@"\\vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
+            ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
+            ChatCommands.Add(new ChatCommand(@"vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
         }
 
         private async Task DisplayHelp(ChatInfo chatInfo)
@@ -59,15 +61,18 @@ namespace VotingRewardMod
 
                 log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
 
+                bool getsome = false;
                 if (Configuration.Current.Cumulative)
                     Configuration.Current.VotingRewards
                         .Where(R => vote.Count % R.EveryXVotesGet == 0)
                         .ToList()
-                        .ForEach(Rs => GivePlayerRewards(player, Rs.Rewards));
-                else GivePlayerRewards(player, Configuration.Current.VotingRewards
+                        .ForEach(Rs => getsome = GivePlayerRewards(player, Rs.Rewards) || getsome);
+                else getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
                         .Last(R => vote.Count % R.EveryXVotesGet == 0).Rewards);
 
                 await MarkRewardClaimed(player);
+
+                if (getsome) await ShowDialog(chat.playerId, player, "Congratulation", "Your reward has been placed in your inventory");
             }
             else
             {
@@ -76,11 +81,12 @@ namespace VotingRewardMod
             }
         }
 
-        private void GivePlayerRewards(PlayerInfo player, List<RewardModConfiguration.VoteReward> rewards)
+        private bool GivePlayerRewards(PlayerInfo player, List<RewardModConfiguration.VoteReward> rewards)
         {
-            if (rewards == null) return;
+            if (rewards == null) return false;
 
             rewards.ForEach(async R => await Request_Player_AddItem(new IdItemStack(player.entityId, new ItemStack(R.Id, R.Count))));
+            return true;
         }
 
         private async Task<bool> DoesPlayerHaveAUnclaimedVote(PlayerInfo player)
@@ -122,6 +128,7 @@ namespace VotingRewardMod
 
         private void LoadConfiuration()
         {
+            ConfigurationManager<RewardModConfiguration>.Log = log;
             Configuration = new ConfigurationManager<RewardModConfiguration>
             {
                 ConfigFilename = Path.Combine(EmpyrionConfiguration.SaveGameModPath, @"Configuration.json")

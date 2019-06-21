@@ -1,10 +1,13 @@
 ﻿using Eleon.Modding;
+using EmpyrionNetAPIDefinitions;
 using System.Collections.Generic;
 
 namespace VotingRewardMod
 {
     public class RewardModConfiguration
     {
+        public LogLevel LogLevel { get; set; } = LogLevel.Message;
+        public string CommandPrefix { get; set; } = "/\\";
         public string VotingApiServerKey { get; set; }
         public bool Cumulative { get; set; }
         public class VoteReward
