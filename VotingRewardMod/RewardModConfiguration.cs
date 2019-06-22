@@ -24,6 +24,7 @@ namespace VotingRewardMod
         public class PlayerVote
         {
             public string SteamId { get; set; }
+            public string PlayerName { get; set; }
             public int Count { get; set; }
         }
         public List<VotingReward> VotingRewards { get; set; }

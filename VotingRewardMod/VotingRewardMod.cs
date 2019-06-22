@@ -109,6 +109,7 @@ namespace VotingRewardMod
 
             var vote = Configuration.Current.PlayerVotes.FirstOrDefault(V => V.SteamId == player.steamId);
             if (vote == null) Configuration.Current.PlayerVotes.Add(vote = new RewardModConfiguration.PlayerVote() { SteamId = player.steamId, Count = 0 });
+            vote.PlayerName = player.playerName;
             return vote;
         }
 
