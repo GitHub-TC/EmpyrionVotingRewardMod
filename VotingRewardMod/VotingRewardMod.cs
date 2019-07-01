@@ -7,11 +7,18 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using System;
 
 namespace VotingRewardMod
 {
     public class VotingRewardMod : EmpyrionModBase
     {
+        enum VoteMode
+        {
+            Voting,
+            Lottery
+        }
+
         public ModGameAPI DediAPI { get; private set; }
 
         public ConfigurationManager<RewardModConfiguration> Configuration { get; set; }
@@ -32,7 +39,9 @@ namespace VotingRewardMod
             LogLevel = Configuration.Current.LogLevel;
             ChatCommandManager.CommandPrefix = Configuration.Current.CommandPrefix;
 
-            ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
+            ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A, VoteMode.Voting),  "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
+            if(Configuration.Current.VotingLottery.Count > 0)
+                ChatCommands.Add(new ChatCommand(@"votelottery", (I, A) => VoteReward(I, A, VoteMode.Lottery), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to play in the lottery"));
             ChatCommands.Add(new ChatCommand(@"vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
         }
 
@@ -44,11 +53,17 @@ namespace VotingRewardMod
             await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\n\n Rewards:" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
-                })
-            );
+                }) + 
+                (Configuration.Current.VotingLottery?.Count == 0 ? "" :
+                "\n\n Lottery:" +
+                Configuration.Current.VotingLottery.GroupBy(R => R.Id).Aggregate("\n", (S, R) => 
+                    R.Key == 0 
+                    ? $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} sorry no win\n"
+                    : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the change on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Name}\n"
+                )));
         }
 
-        private async Task VoteReward(ChatInfo chat, Dictionary<string, string> args)
+        private async Task VoteReward(ChatInfo chat, Dictionary<string, string> args, VoteMode mode)
         {
             var player = await Request_Player_Info(new Id(chat.playerId));
             var vote = GetPlayerVote(player);
@@ -56,23 +71,11 @@ namespace VotingRewardMod
             log($"{player.playerName} is trying to claim a voting reward.");
             if (await DoesPlayerHaveAUnclaimedVote(player))
             {
-                vote.Count++;
-                Configuration.Save();
-
-                log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
-
-                bool getsome = false;
-                if (Configuration.Current.Cumulative)
-                    Configuration.Current.VotingRewards
-                        .Where(R => vote.Count % R.EveryXVotesGet == 0)
-                        .ToList()
-                        .ForEach(Rs => getsome = GivePlayerRewards(player, Rs.Rewards) || getsome);
-                else getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
-                        .Last(R => vote.Count % R.EveryXVotesGet == 0).Rewards);
-
-                await MarkRewardClaimed(player);
-
-                if (getsome) await ShowDialog(chat.playerId, player, "Congratulation", "Your reward has been placed in your inventory");
+                switch (mode)
+                {
+                    case VoteMode.Voting : await AddVote    (chat, player, vote); break;
+                    case VoteMode.Lottery: await PlayLottery(chat, player, vote); break;
+                }
             }
             else
             {
@@ -81,11 +84,54 @@ namespace VotingRewardMod
             }
         }
 
-        private bool GivePlayerRewards(PlayerInfo player, List<RewardModConfiguration.VoteReward> rewards)
+        private async Task AddVote(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
+        {
+            vote.Count++;
+            Configuration.Save();
+
+            log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
+
+            bool getsome = false;
+            if (Configuration.Current.Cumulative)
+                Configuration.Current.VotingRewards
+                    .Where(R => vote.Count % R.EveryXVotesGet == 0)
+                    .ToList()
+                    .ForEach(Rs => getsome = GivePlayerRewards(player, Rs.Rewards) || getsome);
+            else getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
+                    .Last(R => vote.Count % R.EveryXVotesGet == 0).Rewards);
+
+            await MarkRewardClaimed(player);
+
+            if (getsome) await ShowDialog(chat.playerId, player, "Congratulation", "Your reward has been placed in your inventory");
+        }
+
+        private async Task PlayLottery(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
+        {
+            log($"{player.playerName}/{vote.SteamId} claimed a voting for lottery");
+
+            var reward = Configuration.Current.VotingLottery[new Random().Next(0, Configuration.Current.VotingLottery.Count - 1)];
+
+            var getsome = GivePlayerRewards(player, new[] { reward });
+
+            await MarkRewardClaimed(player);
+
+            if (getsome) await ShowDialog(chat.playerId, player, "Congratulation", "Your win has been placed in your inventory");
+            else         await ShowDialog(chat.playerId, player, "Sorry",          "No luck this time - next time new game new luck");
+        }
+
+
+        private bool GivePlayerRewards(PlayerInfo player, IEnumerable<RewardModConfiguration.VoteReward> rewards)
         {
             if (rewards == null) return false;
 
-            rewards.ForEach(async R => await Request_Player_AddItem(new IdItemStack(player.entityId, new ItemStack(R.Id, R.Count))));
+            var give = rewards
+                .Where(R => R.Id != 0)
+                .ToList();
+
+            if (give.Count == 0) return false;
+
+            give.ForEach(async R => await Request_Player_AddItem(new IdItemStack(player.entityId, new ItemStack(R.Id, R.Count))));
+
             return true;
         }
 
@@ -164,6 +210,15 @@ namespace VotingRewardMod
                         }.ToList()
                     }
                 }.ToList(),
+                VotingLottery = new[]
+                {
+                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 2298, Name= "Gold Ingot",   Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 2088, Name= "Epic Drill",   Count = 1 },
+                    new RewardModConfiguration.VoteReward(){ Id = 1110, Name= "T3 AutoMiner", Count = 1 },
+                }.ToList()
             };
 
             Configuration.Save();

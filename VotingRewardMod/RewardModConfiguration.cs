@@ -28,6 +28,7 @@ namespace VotingRewardMod
             public int Count { get; set; }
         }
         public List<VotingReward> VotingRewards { get; set; }
+        public List<VoteReward> VotingLottery { get; set; }
         public List<PlayerVote> PlayerVotes { get; set; }
     }
 }
