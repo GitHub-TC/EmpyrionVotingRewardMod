@@ -11,13 +11,8 @@ using System;
 
 namespace VotingRewardMod
 {
-    public class VotingRewardMod : EmpyrionModBase
+    public partial class VotingRewardMod : EmpyrionModBase
     {
-        enum VoteMode
-        {
-            Voting,
-            Lottery
-        }
 
         public ModGameAPI DediAPI { get; private set; }
 
@@ -39,9 +34,10 @@ namespace VotingRewardMod
             LogLevel = Configuration.Current.LogLevel;
             ChatCommandManager.CommandPrefix = Configuration.Current.CommandPrefix;
 
-            ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A, VoteMode.Voting),  "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to get an award"));
+            ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A, VoteMode.Voting),  "Vote to get an award"));
             if(Configuration.Current.VotingLottery.Count > 0)
-                ChatCommands.Add(new ChatCommand(@"votelottery", (I, A) => VoteReward(I, A, VoteMode.Lottery), "Vote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server to play in the lottery"));
+                ChatCommands.Add(new ChatCommand(@"votelottery", (I, A) => VoteReward(I, A, VoteMode.Lottery), "Vote to play in the lottery"));
+            Configuration.Current.StatsRewards?.ForEach(R => ChatCommands.Add(new ChatCommand($"voteforstat {R.Type.ToString().ToLower()}", (I, A) => VoteReward(I, A, R.Type), $"Vote to boost your {R.Type} for another {R.AddCount} (max: {R.MaxCount})")));
             ChatCommands.Add(new ChatCommand(@"vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
         }
 
@@ -50,7 +46,7 @@ namespace VotingRewardMod
             var player = await Request_Player_Info(chatInfo.playerId.ToId());
             var vote = GetPlayerVote(player);
 
-            await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\n\n Rewards:" +
+            await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\nVote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server.\n\nRewards:" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
                 }) + 
@@ -66,15 +62,15 @@ namespace VotingRewardMod
         private async Task VoteReward(ChatInfo chat, Dictionary<string, string> args, VoteMode mode)
         {
             var player = await Request_Player_Info(new Id(chat.playerId));
-            var vote = GetPlayerVote(player);
 
             log($"{player.playerName} is trying to claim a voting reward.");
             if (await DoesPlayerHaveAUnclaimedVote(player))
             {
                 switch (mode)
                 {
-                    case VoteMode.Voting : await AddVote    (chat, player, vote); break;
-                    case VoteMode.Lottery: await PlayLottery(chat, player, vote); break;
+                    case VoteMode.Voting  : await AddVote    (chat, player, GetPlayerVote(player)); break;
+                    case VoteMode.Lottery : await PlayLottery(chat, player, GetPlayerVote(player)); break;
+                    default:                await AddStats   (chat, player, mode); break;
                 }
             }
             else
@@ -82,6 +78,38 @@ namespace VotingRewardMod
                 log($"No unclaimed voting reward found for {player.playerName}.");
                 MessagePlayer(chat.playerId, "No unclaimed/new voting found.", MessagePriorityType.Alarm);
             }
+        }
+
+        private async Task AddStats(ChatInfo chat, PlayerInfo player, VoteMode vote)
+        {
+            log($"{player.playerName}/{player.steamId} claimed a voting reward for {vote}");
+
+            var found = Configuration.Current.StatsRewards.FirstOrDefault(S => S.Type == vote);
+            bool getsome = false;
+
+            switch (vote)
+            {
+                case VoteMode.Health :
+                    getsome = found?.MaxCount > player.healthMax;
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, healthMax = (int)player.healthMax + found.AddCount });
+                    break;
+                case VoteMode.Food:
+                    getsome = found?.MaxCount > player.foodMax;
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, foodMax = (int)player.foodMax + found.AddCount });
+                    break;
+                case VoteMode.Stamina:
+                    getsome = found?.MaxCount > player.staminaMax;
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, staminaMax = (int)player.staminaMax + found.AddCount });
+                    break;
+            }
+
+            if (getsome) {
+                log($"{player.playerName}/{player.steamId} boost for {vote}");
+
+                await MarkRewardClaimed(player);
+                await ShowDialog(chat.playerId, player, "Congratulation", $"Your reward has been boosted your {vote} stats about {found.AddCount}.");
+            }
+            else await ShowDialog(chat.playerId, player, "Sorry", $"Sorry your {vote} stats is at maxium {found.MaxCount} please choose another reward.");
         }
 
         private async Task AddVote(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
@@ -193,21 +221,30 @@ namespace VotingRewardMod
             Configuration.Current = new RewardModConfiguration() {
                 VotingApiServerKey = "Get yours from https://empyrion-servers.com/",
                 Cumulative = true,
-                VotingRewards = new [] {
+                VotingRewards = new[] {
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 1,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward(){ Id = 2298, Name= "Gold Ingot",  Count = 100 },
-                            new RewardModConfiguration.VoteReward(){ Id = 2373, Name= "Fusion Cell", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 2298, Name = "Gold Ingot", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 2373, Name = "Fusion Cell", Count = 100 },
                         }.ToList(),
                     },
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 100,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward(){ Id = 2088, Name= "Epic Drill", Count = 1 },
+                            new RewardModConfiguration.VoteReward() { Id = 2088, Name = "Epic Drill", Count = 1 },
                         }.ToList()
+                    }
+                }.ToList(),
+                StatsRewards = new[]
+                {
+                    new RewardModConfiguration.VoteStatsReward()
+                    {
+                        Type = VoteMode.Health,
+                        AddCount = 50,
+                        MaxCount = 1000
                     }
                 }.ToList(),
                 VotingLottery = new[]

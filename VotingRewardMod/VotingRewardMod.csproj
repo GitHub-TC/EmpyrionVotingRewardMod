@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="RewardModConfiguration.cs" />
+    <Compile Include="VoteMode.cs" />
     <Compile Include="VotingRewardMod.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
