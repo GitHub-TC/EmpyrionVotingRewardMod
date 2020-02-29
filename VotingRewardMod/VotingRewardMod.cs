@@ -28,7 +28,7 @@ namespace VotingRewardMod
             DediAPI  = dediAPI;
             LogLevel = LogLevel.Message;
 
-            log($"**VotingRewardMod: loaded");
+            Log($"**VotingRewardMod: loaded");
 
             LoadConfiuration();
             LogLevel = Configuration.Current.LogLevel;
@@ -63,7 +63,7 @@ namespace VotingRewardMod
         {
             var player = await Request_Player_Info(new Id(chat.playerId));
 
-            log($"{player.playerName} is trying to claim a voting reward.");
+            Log($"{player.playerName} is trying to claim a voting reward.");
             if (await DoesPlayerHaveAUnclaimedVote(player))
             {
                 switch (mode)
@@ -75,14 +75,14 @@ namespace VotingRewardMod
             }
             else
             {
-                log($"No unclaimed voting reward found for {player.playerName}.");
+                Log($"No unclaimed voting reward found for {player.playerName}.");
                 MessagePlayer(chat.playerId, "No unclaimed/new voting found.", MessagePriorityType.Alarm);
             }
         }
 
         private async Task AddStats(ChatInfo chat, PlayerInfo player, VoteMode vote)
         {
-            log($"{player.playerName}/{player.steamId} claimed a voting reward for {vote}");
+            Log($"{player.playerName}/{player.steamId} claimed a voting reward for {vote}");
 
             var found = Configuration.Current.StatsRewards.FirstOrDefault(S => S.Type == vote);
             bool getsome = false;
@@ -104,7 +104,7 @@ namespace VotingRewardMod
             }
 
             if (getsome) {
-                log($"{player.playerName}/{player.steamId} boost for {vote}");
+                Log($"{player.playerName}/{player.steamId} boost for {vote}");
 
                 await MarkRewardClaimed(player);
                 await ShowDialog(chat.playerId, player, "Congratulation", $"Your reward has been boosted your {vote} stats about {found.AddCount}.");
@@ -117,7 +117,7 @@ namespace VotingRewardMod
             vote.Count++;
             Configuration.Save();
 
-            log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
+            Log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
 
             bool getsome = false;
             if (Configuration.Current.Cumulative)
@@ -135,7 +135,7 @@ namespace VotingRewardMod
 
         private async Task PlayLottery(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
         {
-            log($"{player.playerName}/{vote.SteamId} claimed a voting for lottery");
+            Log($"{player.playerName}/{vote.SteamId} claimed a voting for lottery");
 
             var reward = Configuration.Current.VotingLottery[new Random().Next(0, Configuration.Current.VotingLottery.Count - 1)];
 
@@ -203,7 +203,7 @@ namespace VotingRewardMod
 
         private void LoadConfiuration()
         {
-            ConfigurationManager<RewardModConfiguration>.Log = log;
+            ConfigurationManager<RewardModConfiguration>.Log = Log;
             Configuration = new ConfigurationManager<RewardModConfiguration>
             {
                 ConfigFilename = Path.Combine(EmpyrionConfiguration.SaveGameModPath, @"Configuration.json")
