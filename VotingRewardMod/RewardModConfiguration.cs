@@ -13,6 +13,8 @@ namespace VotingRewardMod
         public string CommandPrefix { get; set; } = "/\\";
         public string VotingApiServerKey { get; set; }
         public bool Cumulative { get; set; }
+        public string RewardTestPlayerName { get; set; } = "";
+
         public class VoteReward
         {
             public int Id { get; set; }

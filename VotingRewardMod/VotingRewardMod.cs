@@ -56,7 +56,8 @@ namespace VotingRewardMod
                     R.Key == 0 
                     ? $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} sorry no win\n"
                     : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the change on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Name}\n"
-                )));
+                )) + 
+                (string.IsNullOrEmpty(Configuration.Current.RewardTestPlayerName) ? "" : $"\nRewardTestPlayer:{Configuration.Current.RewardTestPlayerName}"));
         }
 
         private async Task VoteReward(ChatInfo chat, Dictionary<string, string> args, VoteMode mode)
@@ -165,6 +166,8 @@ namespace VotingRewardMod
 
         private async Task<bool> DoesPlayerHaveAUnclaimedVote(PlayerInfo player)
         {
+            if (player.playerName == Configuration.Current.RewardTestPlayerName) return true;
+
             var uri = $"https://empyrion-servers.com/api/?object=votes&element=claim&key={Configuration.Current.VotingApiServerKey}&steamid={player.steamId}";
             var response = await CallRestMethod("GET", uri);
             return response == "1";
@@ -172,6 +175,8 @@ namespace VotingRewardMod
 
         private async Task MarkRewardClaimed(PlayerInfo player)
         {
+            if (player.playerName == Configuration.Current.RewardTestPlayerName) return;
+
             var uri = $"https://empyrion-servers.com/api/?action=post&object=votes&element=claim&key={Configuration.Current.VotingApiServerKey}&steamid={player.steamId}";
 
             await CallRestMethod("POST", uri);
@@ -226,15 +231,15 @@ namespace VotingRewardMod
                         EveryXVotesGet = 1,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward() { Id = 2298, Name = "Gold Ingot", Count = 100 },
-                            new RewardModConfiguration.VoteReward() { Id = 2373, Name = "Fusion Cell", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 4346, Name = "Gold Ingot", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 4421, Name = "Fusion Cell", Count = 100 },
                         }.ToList(),
                     },
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 100,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward() { Id = 2088, Name = "Epic Drill", Count = 1 },
+                            new RewardModConfiguration.VoteReward() { Id = 4136, Name = "Epic Drill", Count = 1 },
                         }.ToList()
                     }
                 }.ToList(),
@@ -249,11 +254,11 @@ namespace VotingRewardMod
                 }.ToList(),
                 VotingLottery = new[]
                 {
-                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 2381, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 2298, Name= "Gold Ingot",   Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 2088, Name= "Epic Drill",   Count = 1 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4346, Name= "Gold Ingot",   Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4136, Name= "Epic Drill",   Count = 1 },
                     new RewardModConfiguration.VoteReward(){ Id = 1110, Name= "T3 AutoMiner", Count = 1 },
                 }.ToList()
             };
