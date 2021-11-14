@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("ASTIC/TC (adaped from Mortlath)")]
 [assembly: AssemblyProduct("VotingRewardMod")]
-[assembly: AssemblyCopyright("Copyright ©2021")]
+[assembly: AssemblyCopyright("ASTIC/TC ©2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
