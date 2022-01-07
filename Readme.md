@@ -20,6 +20,29 @@ Nach einer Abstimmung auf der Seite https://empyrion-servers.com kann der Spiele
 
 Mit dem Befehl "\\vote help" kann der Spieler die möglichen Belohnungen und die Anzahl seiner Stimmen abrufen.
 
+Konfigurationsparameter:
+```
+{0} = VotingApiServerKey
+{1} = Player SteamID
+{2} = Player Name
+```
+
+Konfiguration für top-games.net (PlayerName):
+```
+"ServerVotingHomepage": "https://top-games.net",
+"GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-username?server_token={0}&playername={2}",
+"GetUnclaimedVoteMatch": ".*\"claimed\"\\s*:\\s*1\\s*,.*",
+"ClaimedVoteUrl": "",
+```
+
+Konfiguration für top-games.net (SteamId) (scheint nicht zu funktionieren):
+```
+"ServerVotingHomepage": "https://top-games.net",
+"GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-steam?server_token={0}&steam_id={1}",
+"GetUnclaimedVoteMatch": ".*\"claimed\"\\s*:\\s*1\\s*,.*",
+"ClaimedVoteUrl": "",
+```
+
 # Empyrion Voting Reward Mod
 
 ## Installation
@@ -41,3 +64,26 @@ After a vote on the page https://empyrion-servers.com the player can request his
 * "\\voteforstat food" increase your food with you vote
 
 With the command "\\vote help" the player can retrieve the possible rewards and his number of votes.
+
+Configuration parameters:
+```
+{0} = VotingApiServerKey
+{1} = Spieler SteamID
+{2} = Spielername
+```
+
+Configuration for top-games.net (PlayerName):
+```
+"ServerVotingHomepage": "https://top-games.net",
+"GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-username?server_token={0}&playername={2}",
+"GetUnclaimedVoteMatch": ".*\"claimed\"\\s*:\\s*1\\s*,.*",
+"ClaimedVoteUrl": "",
+```
+
+Configuration for top-games.net (SteamID) (does not seem to be working):
+```
+"ServerVotingHomepage": "https://top-games.net",
+"GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-steam?server_token={0}&steam_id={1}",
+"GetUnclaimedVoteMatch": ".*\"claimed\"\\s*:\\s*1\\s*,.*",
+"ClaimedVoteUrl": "",
+```

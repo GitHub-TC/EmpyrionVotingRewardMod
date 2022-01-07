@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System;
+using System.Text.RegularExpressions;
 
 namespace VotingRewardMod
 {
@@ -46,7 +47,7 @@ namespace VotingRewardMod
             var player = await Request_Player_Info(chatInfo.playerId.ToId());
             var vote = GetPlayerVote(player);
 
-            await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\nVote on [c][cc0000]https://empyrion-servers.com[-][/c] for the server.\n\nRewards:" +
+            await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards:" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
                 }) + 
@@ -168,18 +169,18 @@ namespace VotingRewardMod
         {
             if (player.playerName == Configuration.Current.RewardTestPlayerName) return true;
 
-            var uri = $"https://empyrion-servers.com/api/?object=votes&element=claim&key={Configuration.Current.VotingApiServerKey}&steamid={player.steamId}";
+            var uri = string.Format(Configuration.Current.GetUnclaimedVoteUrl, Configuration.Current.VotingApiServerKey, player.steamId, player.playerName);
             var response = await CallRestMethod("GET", uri);
-            return response == "1";
+            return Regex.Match(response, Configuration.Current.GetUnclaimedVoteMatch).Success;
         }
 
         private async Task MarkRewardClaimed(PlayerInfo player)
         {
-            if (player.playerName == Configuration.Current.RewardTestPlayerName) return;
+            if (player.playerName == Configuration.Current.RewardTestPlayerName || string.IsNullOrEmpty(Configuration.Current.ClaimedVoteUrl)) return;
 
-            var uri = $"https://empyrion-servers.com/api/?action=post&object=votes&element=claim&key={Configuration.Current.VotingApiServerKey}&steamid={player.steamId}";
+            var uri = string.Format(Configuration.Current.ClaimedVoteUrl, Configuration.Current.VotingApiServerKey, player.steamId, player.playerName);
 
-            await CallRestMethod("POST", uri);
+            await CallRestMethod(Configuration.Current.ClaimedVoteMethod, uri);
         }
 
         RewardModConfiguration.PlayerVote GetPlayerVote(PlayerInfo player)
@@ -192,17 +193,25 @@ namespace VotingRewardMod
             return vote;
         }
 
-        public async static Task<string> CallRestMethod(string method, string url)
+        public async Task<string> CallRestMethod(string method, string url)
         {
-            var webrequest = WebRequest.Create(url);
-            webrequest.Method = method;
-            using (var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(webrequest.BeginGetResponse, webrequest.EndGetResponse, null))
+            try
             {
-                var responseStream = new StreamReader(response.GetResponseStream(), System.Text.Encoding.GetEncoding("utf-8"));
-                string result = string.Empty;
-                result = responseStream.ReadToEnd();
+                var webrequest = WebRequest.Create(url);
+                webrequest.Method = method;
+                using (var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(webrequest.BeginGetResponse, webrequest.EndGetResponse, null))
+                {
+                    var responseStream = new StreamReader(response.GetResponseStream(), System.Text.Encoding.GetEncoding("utf-8"));
+                    string result = string.Empty;
+                    result = responseStream.ReadToEnd();
 
-                return result;
+                    return result;
+                }
+            }
+            catch (Exception error)
+            {
+                Log($"CallRestMethod:{url} => {error.Message}", LogLevel.Error);
+                return string.Empty;
             }
         }
 
@@ -214,19 +223,11 @@ namespace VotingRewardMod
                 ConfigFilename = Path.Combine(EmpyrionConfiguration.SaveGameModPath, @"Configuration.json")
             };
 
-            var DemoInit = !File.Exists(Configuration.ConfigFilename);
-
-            Configuration.Load();
-
-            if (DemoInit) DemoInitConfiguration();
-        }
-
-        private void DemoInitConfiguration()
-        {
-            Configuration.Current = new RewardModConfiguration() {
-                VotingApiServerKey = "Get yours from https://empyrion-servers.com/",
-                Cumulative = true,
-                VotingRewards = new[] {
+            Configuration.CreateDefaults = (config) => 
+            {
+                config.VotingApiServerKey = "Get yours from https://empyrion-servers.com/ or your server voting provider";
+                config.Cumulative = true;
+                config.VotingRewards = new[] {
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 1,
                         Rewards = new[]
@@ -242,8 +243,8 @@ namespace VotingRewardMod
                             new RewardModConfiguration.VoteReward() { Id = 4136, Name = "Epic Drill", Count = 1 },
                         }.ToList()
                     }
-                }.ToList(),
-                StatsRewards = new[]
+                }.ToList();
+                config.StatsRewards = new[]
                 {
                     new RewardModConfiguration.VoteStatsReward()
                     {
@@ -251,8 +252,8 @@ namespace VotingRewardMod
                         AddCount = 50,
                         MaxCount = 1000
                     }
-                }.ToList(),
-                VotingLottery = new[]
+                }.ToList();
+                config.VotingLottery = new[]
                 {
                     new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
                     new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
@@ -260,10 +261,13 @@ namespace VotingRewardMod
                     new RewardModConfiguration.VoteReward(){ Id = 4346, Name= "Gold Ingot",   Count = 100 },
                     new RewardModConfiguration.VoteReward(){ Id = 4136, Name= "Epic Drill",   Count = 1 },
                     new RewardModConfiguration.VoteReward(){ Id = 1110, Name= "T3 AutoMiner", Count = 1 },
-                }.ToList()
+                }.ToList();
             };
 
-            Configuration.Save();
+            Configuration.Load();
+
+            if (Configuration.LoadException == null) Configuration.Save();
         }
+
     }
 }

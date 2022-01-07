@@ -14,6 +14,11 @@ namespace VotingRewardMod
         public string VotingApiServerKey { get; set; }
         public bool Cumulative { get; set; }
         public string RewardTestPlayerName { get; set; } = "";
+        public string ServerVotingHomepage { get; set; } = "https://empyrion-servers.com";
+        public string GetUnclaimedVoteUrl { get; set; } = "https://empyrion-servers.com/api/?object=votes&element=claim&key={0}&steamid={1}";
+        public string GetUnclaimedVoteMatch { get; set; } = "1";
+        public string ClaimedVoteUrl { get; set; } = "https://empyrion-servers.com/api/?action=post&object=votes&element=claim&key={0}&steamid={1}";
+        public string ClaimedVoteMethod { get; set; } = "POST";
 
         public class VoteReward
         {
