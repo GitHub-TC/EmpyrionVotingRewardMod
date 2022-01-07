@@ -1,4 +1,4 @@
-# EmpyrionBackpackExtender
+# Empyrion Voting Reward Mod
 
 ## Installation
 Sie können diesen Mod direkt mit dem MOD-Manager von EWA (Empyrion Web Access) laden. <br/>
