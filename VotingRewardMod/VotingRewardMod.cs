@@ -56,12 +56,12 @@ namespace VotingRewardMod
             AddCount(voteStats, vote.Statistic.VoteForOxygen,  "max oxygen");
             AddCount(voteStats, vote.Statistic.VoteForStamina, "max stamina");
 
-            await DisplayHelp(chatInfo.playerId, $"{voteStats}\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards:" +
+            await DisplayHelp(chatInfo.playerId, $"{voteStats}\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards (/votereward):" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
                 }) + 
                 (Configuration.Current.VotingLottery?.Count == 0 ? "" :
-                "\n\n Lottery:" +
+                "\nLottery (/votelottery):" +
                 Configuration.Current.VotingLottery.GroupBy(R => R.Id).Aggregate("\n", (S, R) => 
                     R.Key == 0 
                     ? $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} sorry no win\n"
