@@ -9,6 +9,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace VotingRewardMod
 {
@@ -38,7 +39,7 @@ namespace VotingRewardMod
             ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A, VoteMode.Voting),  "Vote to get an award"));
             if(Configuration.Current.VotingLottery.Count > 0)
                 ChatCommands.Add(new ChatCommand(@"votelottery", (I, A) => VoteReward(I, A, VoteMode.Lottery), "Vote to play in the lottery"));
-            Configuration.Current.StatsRewards?.ForEach(R => ChatCommands.Add(new ChatCommand($"voteforstat {R.Type.ToString().ToLower()}", (I, A) => VoteReward(I, A, R.Type), $"Vote to boost your {R.Type} for another {R.AddCount} (max: {R.MaxCount})")));
+            Configuration.Current.StatsRewards?.ForEach(R => ChatCommands.Add(new ChatCommand($"voteforstat {R.Type.ToString().ToLower()}", (I, A) => VoteReward(I, A, R.Type), $"Vote to boost your {R.Type} max for another {R.AddCount} (max: {R.MaxCount})")));
             ChatCommands.Add(new ChatCommand(@"vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
         }
 
@@ -47,7 +48,15 @@ namespace VotingRewardMod
             var player = await Request_Player_Info(chatInfo.playerId.ToId());
             var vote = GetPlayerVote(player);
 
-            await DisplayHelp(chatInfo.playerId, $"You have {vote.Count} votes.\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards:" +
+            var voteStats = new StringBuilder($"Since {vote.Statistic.StartAtUtc.ToLocalTime():dd.MM.yyyy} you have the following votes\n");
+            AddCount(voteStats, vote.Statistic.VoteForReward,  "rewards");
+            AddCount(voteStats, vote.Statistic.VoteForLottery, "lottery");
+            AddCount(voteStats, vote.Statistic.VoteForHealth,  "max health");
+            AddCount(voteStats, vote.Statistic.VoteForFood,    "max food");
+            AddCount(voteStats, vote.Statistic.VoteForOxygen,  "max oxygen");
+            AddCount(voteStats, vote.Statistic.VoteForStamina, "max stamina");
+
+            await DisplayHelp(chatInfo.playerId, $"{voteStats}\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards:" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
                 }) + 
@@ -61,6 +70,11 @@ namespace VotingRewardMod
                 (string.IsNullOrEmpty(Configuration.Current.RewardTestPlayerName) ? "" : $"\nRewardTestPlayer:{Configuration.Current.RewardTestPlayerName}"));
         }
 
+        private void AddCount(StringBuilder voteStats, int voteCount, string name)
+        {
+            if (voteCount != 0) voteStats.AppendLine($"{voteCount} votes for {name}");
+        }
+
         private async Task VoteReward(ChatInfo chat, Dictionary<string, string> args, VoteMode mode)
         {
             var player = await Request_Player_Info(new Id(chat.playerId));
@@ -72,7 +86,7 @@ namespace VotingRewardMod
                 {
                     case VoteMode.Voting  : await AddVote    (chat, player, GetPlayerVote(player)); break;
                     case VoteMode.Lottery : await PlayLottery(chat, player, GetPlayerVote(player)); break;
-                    default:                await AddStats   (chat, player, mode); break;
+                    default:                await AddStats   (chat, player, GetPlayerVote(player), mode); break;
                 }
             }
             else
@@ -82,53 +96,67 @@ namespace VotingRewardMod
             }
         }
 
-        private async Task AddStats(ChatInfo chat, PlayerInfo player, VoteMode vote)
+        private async Task AddStats(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote, VoteMode voteMode)
         {
-            Log($"{player.playerName}/{player.steamId} claimed a voting reward for {vote}");
+            Log($"{player.playerName}/{player.steamId} claimed a voting reward for {voteMode}");
 
-            var found = Configuration.Current.StatsRewards.FirstOrDefault(S => S.Type == vote);
+            var found = Configuration.Current.StatsRewards.FirstOrDefault(S => S.Type == voteMode);
             bool getsome = false;
 
-            switch (vote)
+            switch (voteMode)
             {
                 case VoteMode.Health :
                     getsome = found?.MaxCount > player.healthMax;
-                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, healthMax = (int)player.healthMax + found.AddCount });
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, healthMax  = (int)player.healthMax    + found.AddCount });
                     break;
                 case VoteMode.Food:
                     getsome = found?.MaxCount > player.foodMax;
-                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, foodMax = (int)player.foodMax + found.AddCount });
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, foodMax    = (int)player.foodMax      + found.AddCount });
                     break;
                 case VoteMode.Stamina:
                     getsome = found?.MaxCount > player.staminaMax;
-                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, staminaMax = (int)player.staminaMax + found.AddCount });
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, staminaMax = (int)player.staminaMax   + found.AddCount });
+                    break;
+                case VoteMode.Oxygen:
+                    getsome = found?.MaxCount > player.oxygenMax;
+                    if (getsome) await Request_Player_SetPlayerInfo(new PlayerInfoSet() { entityId = player.entityId, oxygenMax  = (int)player.oxygenMax    + found.AddCount });
                     break;
             }
 
+
             if (getsome) {
-                Log($"{player.playerName}/{player.steamId} boost for {vote}");
+                Log($"{player.playerName}/{player.steamId} boost for {voteMode}");
+
+                switch (voteMode)
+                {
+                    case VoteMode.Health : vote.Statistic.VoteForHealth ++; break;
+                    case VoteMode.Stamina: vote.Statistic.VoteForStamina++; break;
+                    case VoteMode.Food   : vote.Statistic.VoteForFood   ++; break;
+                    case VoteMode.Oxygen : vote.Statistic.VoteForOxygen ++; break;
+                }
+                Configuration.Save();
 
                 await MarkRewardClaimed(player);
-                await ShowDialog(chat.playerId, player, "Congratulation", $"Your reward has been boosted your {vote} stats about {found.AddCount}.");
+                await ShowDialog(chat.playerId, player, "Congratulation", $"Your reward has been boosted your {voteMode} stats about {found.AddCount}.");
             }
-            else await ShowDialog(chat.playerId, player, "Sorry", $"Sorry your {vote} stats is at maxium {found.MaxCount} please choose another reward.");
+            else await ShowDialog(chat.playerId, player, "Sorry", $"Sorry your {voteMode} stats is at maxium {found.MaxCount} please choose another reward.");
         }
 
         private async Task AddVote(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
         {
-            vote.Count++;
+            vote.Statistic.VoteForReward++;
             Configuration.Save();
 
-            Log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Count}");
+            Log($"{player.playerName}/{vote.SteamId} claimed a voting reward for {vote.Statistic.VoteForReward}");
 
             bool getsome = false;
             if (Configuration.Current.Cumulative)
                 Configuration.Current.VotingRewards
-                    .Where(R => vote.Count % R.EveryXVotesGet == 0)
+                    .Where(R => vote.Statistic.VoteForReward % R.EveryXVotesGet == 0)
                     .ToList()
                     .ForEach(Rs => getsome = GivePlayerRewards(player, Rs.Rewards) || getsome);
             else getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
-                    .Last(R => vote.Count % R.EveryXVotesGet == 0).Rewards);
+                    .Last(R => vote.Statistic.VoteForReward % R.EveryXVotesGet == 0).Rewards);
 
             await MarkRewardClaimed(player);
 
@@ -137,6 +165,9 @@ namespace VotingRewardMod
 
         private async Task PlayLottery(ChatInfo chat, PlayerInfo player, RewardModConfiguration.PlayerVote vote)
         {
+            vote.Statistic.VoteForLottery++;
+            Configuration.Save();
+
             Log($"{player.playerName}/{vote.SteamId} claimed a voting for lottery");
 
             var reward = Configuration.Current.VotingLottery[new Random().Next(0, Configuration.Current.VotingLottery.Count - 1)];

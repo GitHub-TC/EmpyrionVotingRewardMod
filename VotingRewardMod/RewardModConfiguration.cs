@@ -2,6 +2,7 @@
 using EmpyrionNetAPIDefinitions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System;
 using System.Collections.Generic;
 
 namespace VotingRewardMod
@@ -39,11 +40,22 @@ namespace VotingRewardMod
             public int EveryXVotesGet { get; set; }
             public List<VoteReward> Rewards { get; set; }
         }
+        public class Statistic
+        {
+            public DateTime StartAtUtc { get; set; }
+            public int VoteForReward { get; set; }
+            public int VoteForLottery { get; set; }
+            public int VoteForHealth { get; set; }
+            public int VoteForFood { get; set; }
+            public int VoteForStamina { get; set; }
+            public int VoteForOxygen { get; set; }
+        }
         public class PlayerVote
         {
             public string SteamId { get; set; }
             public string PlayerName { get; set; }
-            public int Count { get; set; }
+            public int Count { set { Statistic.VoteForReward = value; } }
+            public Statistic Statistic { get; set; } = new Statistic { StartAtUtc = DateTime.UtcNow };
         }
         public List<VoteStatsReward> StatsRewards { get; set; }
         public List<VotingReward> VotingRewards { get; set; }

@@ -7,5 +7,6 @@
         Health,
         Stamina,
         Food,
+        Oxygen,
     }
 }

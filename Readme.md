@@ -14,9 +14,10 @@ Hier muss auch der API-Schlüssel für den Zugriff auf https://empyrion-servers.co
 Nach einer Abstimmung auf der Seite https://empyrion-servers.com kann der Spieler seine Belohnung mit der Teilabstimmung anfordern
 * "\\votereward" gibt dir eine Belohnung
 * "\\votelottery" spielt in der Lotterie mit Ihrer Stimme
-* "\\voteforstat health" erhöht deine Gesundheit mit deiner Stimme
-* "\\voteforstat stamina" erhöht deine Ausdauer mit deiner Stimme
-* "\\voteforstat food" erhöht dein Essen mit deiner Stimme
+* "\\voteforstat health" erhöht deine Gesundheitsmaximum mit deiner Stimme
+* "\\voteforstat stamina" erhöht deine Ausdauermaximum mit deiner Stimme
+* "\\voteforstat food" erhöht dein Essensmaximum mit deiner Stimme
+* "\\voteforstat oxygen" erhöht dein Sauerstoffmaximum mit deiner Stimme
 
 Mit dem Befehl "\\vote help" kann der Spieler die möglichen Belohnungen und die Anzahl seiner Stimmen abrufen.
 
@@ -59,9 +60,10 @@ Here also the API key must be deposited for the access to https://empyrion-serve
 After a vote on the page https://empyrion-servers.com the player can request his reward with the fractional vote
 * "\\votereward" gives you a reward
 * "\\votelottery" play in the lottery with your vote
-* "\\voteforstat health" increase your health with you vote
-* "\\voteforstat stamina" increase your stamina with you vote
-* "\\voteforstat food" increase your food with you vote
+* "\\voteforstat health" increase your m axhealth with you vote
+* "\\voteforstat stamina" increase your max stamina with you vote
+* "\\voteforstat food" increase your max food with you vote
+* "\\voteforstat oxygen" increase your max oxygen with you vote
 
 With the command "\\vote help" the player can retrieve the possible rewards and his number of votes.
 
