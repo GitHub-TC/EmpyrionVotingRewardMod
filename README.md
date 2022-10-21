@@ -1,25 +1,25 @@
 # Empyrion Voting Reward Mod
 
 ## Installation
-Sie können diesen Mod direkt mit dem MOD-Manager von EWA (Empyrion Web Access) laden. <br/>
+Sie kÃ¶nnen diesen Mod direkt mit dem MOD-Manager von EWA (Empyrion Web Access) laden. <br/>
 Ohne den EWA funktioniert der Mod (vermutlich) nur innerhalb des EmpyrionModHost
 
 ## Konfigurieren Sie Ihre Belohnungen
 Nach der Installation und dem Start des Mods gibt es hier eine Beispielkonfiguration, die angepasst werden kann.
 [SaveGamePath]\\Mods\\VotingReward\\Configuration.json
 
-Hier muss auch der API-Schlüssel für den Zugriff auf https://empyrion-servers.com hinterlegt werden
+Hier muss auch der API-SchlÃ¼ssel fÃ¼r den Zugriff auf https://empyrion-servers.com hinterlegt werden
 
 ## Verwendungszweck
 Nach einer Abstimmung auf der Seite https://empyrion-servers.com kann der Spieler seine Belohnung mit der Teilabstimmung anfordern
 * "\\votereward" gibt dir eine Belohnung
 * "\\votelottery" spielt in der Lotterie mit Ihrer Stimme
-* "\\voteforstat health" erhöht deine Gesundheitsmaximum mit deiner Stimme
-* "\\voteforstat stamina" erhöht deine Ausdauermaximum mit deiner Stimme
-* "\\voteforstat food" erhöht dein Essensmaximum mit deiner Stimme
-* "\\voteforstat oxygen" erhöht dein Sauerstoffmaximum mit deiner Stimme
+* "\\voteforstat health" erhÃ¶ht deine Gesundheitsmaximum mit deiner Stimme
+* "\\voteforstat stamina" erhÃ¶ht deine Ausdauermaximum mit deiner Stimme
+* "\\voteforstat food" erhÃ¶ht dein Essensmaximum mit deiner Stimme
+* "\\voteforstat oxygen" erhÃ¶ht dein Sauerstoffmaximum mit deiner Stimme
 
-Mit dem Befehl "\\vote help" kann der Spieler die möglichen Belohnungen und die Anzahl seiner Stimmen abrufen.
+Mit dem Befehl "\\vote help" kann der Spieler die mÃ¶glichen Belohnungen und die Anzahl seiner Stimmen abrufen.
 
 Konfigurationsparameter:
 ```
@@ -28,7 +28,7 @@ Konfigurationsparameter:
 {2} = Player Name
 ```
 
-Konfiguration für top-games.net (PlayerName):
+Konfiguration fÃ¼r top-games.net (PlayerName):
 ```
 "ServerVotingHomepage": "https://top-games.net",
 "GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-username?server_token={0}&playername={2}",
@@ -36,7 +36,7 @@ Konfiguration für top-games.net (PlayerName):
 "ClaimedVoteUrl": "",
 ```
 
-Konfiguration für top-games.net (SteamId) (scheint nicht zu funktionieren):
+Konfiguration fÃ¼r top-games.net (SteamId) (scheint nicht zu funktionieren):
 ```
 "ServerVotingHomepage": "https://top-games.net",
 "GetUnclaimedVoteUrl" : "https://api.top-games.net/v1/votes/claim-steam?server_token={0}&steam_id={1}",
