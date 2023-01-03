@@ -20,11 +20,13 @@ namespace VotingRewardMod
         public string GetUnclaimedVoteMatch { get; set; } = "1";
         public string ClaimedVoteUrl { get; set; } = "https://empyrion-servers.com/api/?action=post&object=votes&element=claim&key={0}&steamid={1}";
         public string ClaimedVoteMethod { get; set; } = "POST";
+        public string NameIdMappingFile { get; set; } = "filepath to the NameIdMapping.json e.g. from EmpyrionScripting for cross savegame support";
 
         public class VoteReward
         {
             public int Id { get; set; }
             public string Name { get; set; }
+            public string Description { get; set; }
             public int Count { get; set; }
         }
 

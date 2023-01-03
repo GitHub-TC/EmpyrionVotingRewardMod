@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System;
 using System.Text.RegularExpressions;
 using System.Text;
+using NameIdMappingTools;
 
 namespace VotingRewardMod
 {
@@ -19,10 +20,14 @@ namespace VotingRewardMod
         public ModGameAPI DediAPI { get; private set; }
 
         public ConfigurationManager<RewardModConfiguration> Configuration { get; set; }
+        public BlockNameIdMapping Mapping { get; }
 
         public VotingRewardMod()
         {
             EmpyrionConfiguration.ModName = "VotingReward";
+            BlockNameIdMapping.Log = Log;
+
+            Mapping = new BlockNameIdMapping(() => Configuration?.Current?.NameIdMappingFile);
         }
 
         public override void Initialize(ModGameAPI dediAPI)
@@ -36,11 +41,49 @@ namespace VotingRewardMod
             LogLevel = Configuration.Current.LogLevel;
             ChatCommandManager.CommandPrefix = Configuration.Current.CommandPrefix;
 
+            SyncBlockIdMapping();
+
             ChatCommands.Add(new ChatCommand(@"votereward",  (I, A) => VoteReward(I, A, VoteMode.Voting),  "Vote to get an award"));
             if(Configuration.Current.VotingLottery.Count > 0)
                 ChatCommands.Add(new ChatCommand(@"votelottery", (I, A) => VoteReward(I, A, VoteMode.Lottery), "Vote to play in the lottery"));
             Configuration.Current.StatsRewards?.ForEach(R => ChatCommands.Add(new ChatCommand($"voteforstat {R.Type.ToString().ToLower()}", (I, A) => VoteReward(I, A, R.Type), $"Vote to boost your {R.Type} max for another {R.AddCount} (max: {R.MaxCount})")));
             ChatCommands.Add(new ChatCommand(@"vote help",   (I, A) => DisplayHelp(I),   "Votereward help"));
+        }
+
+        private void SyncBlockIdMapping()
+        {
+            Configuration.Current.VotingLottery?                             .ForEach(UpdateToNewConfigurationFormat);
+            Configuration.Current.VotingRewards?.ForEach(vote => vote.Rewards.ForEach(UpdateToNewConfigurationFormat));
+
+            if (Mapping.NameId != null)
+            {
+                Configuration.Current.VotingLottery?.ForEach(SyncId);
+                Configuration.Current.VotingRewards?.ForEach(vote => vote.Rewards.ForEach(SyncId));
+            }
+
+            Configuration.Save();
+        }
+
+        private void SyncId(RewardModConfiguration.VoteReward r)
+        {
+            if (Mapping.NameId == null || Mapping.NameId.Count == 0) return;
+
+            if (string.IsNullOrEmpty(r.Name))
+            {
+                if (Mapping.IdName.TryGetValue(r.Id, out var name)) r.Name = name;
+            }
+            else if(Mapping.NameId.TryGetValue(r.Name, out var id))
+            {
+                r.Id = id;
+            }
+        }
+
+        private static void UpdateToNewConfigurationFormat(RewardModConfiguration.VoteReward r)
+        {
+            if (!string.IsNullOrEmpty(r.Description)) return;
+
+            r.Description = r.Name; 
+            r.Name        = null;
         }
 
         private async Task DisplayHelp(ChatInfo chatInfo)
@@ -58,14 +101,14 @@ namespace VotingRewardMod
 
             await DisplayHelp(chatInfo.playerId, $"{voteStats}\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards (/votereward):" +
                 Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
-                    return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Name}, {s}") + "\n";
+                    return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Description}, {s}") + "\n";
                 }) + 
                 (Configuration.Current.VotingLottery?.Count == 0 ? "" :
                 "\nLottery (/votelottery):" +
                 Configuration.Current.VotingLottery.GroupBy(R => R.Id).Aggregate("\n", (S, R) => 
                     R.Key == 0 
                     ? $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} sorry no win\n"
-                    : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the change on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Name}\n"
+                    : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the change on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Description}\n"
                 )) + 
                 (string.IsNullOrEmpty(Configuration.Current.RewardTestPlayerName) ? "" : $"\nRewardTestPlayer:{Configuration.Current.RewardTestPlayerName}"));
         }
@@ -263,15 +306,15 @@ namespace VotingRewardMod
                         EveryXVotesGet = 1,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward() { Id = 4346, Name = "Gold Ingot", Count = 100 },
-                            new RewardModConfiguration.VoteReward() { Id = 4421, Name = "Fusion Cell", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 4346, Description = "Gold Ingot", Count = 100 },
+                            new RewardModConfiguration.VoteReward() { Id = 4421, Description = "Fusion Cell", Count = 100 },
                         }.ToList(),
                     },
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 100,
                         Rewards = new[]
                         {
-                            new RewardModConfiguration.VoteReward() { Id = 4136, Name = "Epic Drill", Count = 1 },
+                            new RewardModConfiguration.VoteReward() { Id = 4136, Description = "Epic Drill", Count = 1 },
                         }.ToList()
                     }
                 }.ToList();
@@ -286,12 +329,12 @@ namespace VotingRewardMod
                 }.ToList();
                 config.VotingLottery = new[]
                 {
-                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 4429, Name= "Rotten Food",  Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 4346, Name= "Gold Ingot",   Count = 100 },
-                    new RewardModConfiguration.VoteReward(){ Id = 4136, Name= "Epic Drill",   Count = 1 },
-                    new RewardModConfiguration.VoteReward(){ Id = 1110, Name= "T3 AutoMiner", Count = 1 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Description= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Description= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4429, Description= "Rotten Food",  Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4346, Description= "Gold Ingot",   Count = 100 },
+                    new RewardModConfiguration.VoteReward(){ Id = 4136, Description= "Epic Drill",   Count = 1 },
+                    new RewardModConfiguration.VoteReward(){ Id = 1110, Description= "T3 AutoMiner", Count = 1 },
                 }.ToList();
             };
 
