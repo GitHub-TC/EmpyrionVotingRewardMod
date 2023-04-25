@@ -61,7 +61,7 @@ namespace VotingRewardMod
                 Configuration.Current.VotingRewards?.ForEach(vote => vote.Rewards.ForEach(SyncId));
             }
 
-            Configuration.Save();
+            if (Configuration.LoadException == null) Configuration.Save();
         }
 
         private void SyncId(RewardModConfiguration.VoteReward r)
