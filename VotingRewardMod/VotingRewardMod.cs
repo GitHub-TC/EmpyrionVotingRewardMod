@@ -108,7 +108,7 @@ namespace VotingRewardMod
                 Configuration.Current.VotingLottery.GroupBy(R => R.Id).Aggregate("\n", (S, R) => 
                     R.Key == 0 
                     ? $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} sorry no win\n"
-                    : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the change on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Description}\n"
+                    : $"{S}{Configuration.Current.VotingLottery.Count(r => r.Id == R.Key)} times the chance on {R.GroupBy(r => r.Count).Aggregate((string)null, (s, r) => $"{(s == null ? "" : s + ", ")}{r.Key}")} {R.First().Description}\n"
                 )) + 
                 (string.IsNullOrEmpty(Configuration.Current.RewardTestPlayerName) ? "" : $"\nRewardTestPlayer:{Configuration.Current.RewardTestPlayerName}"));
         }
