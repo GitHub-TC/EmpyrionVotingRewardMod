@@ -39,6 +39,7 @@ namespace VotingRewardMod
         }
         public class VotingReward
         {
+            public int ForVoteNumerXGet { get; set; }
             public int EveryXVotesGet { get; set; }
             public List<VoteReward> Rewards { get; set; }
         }

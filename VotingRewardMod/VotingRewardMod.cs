@@ -100,9 +100,12 @@ namespace VotingRewardMod
             AddCount(voteStats, vote.Statistic.VoteForStamina, "max stamina");
 
             await DisplayHelp(chatInfo.playerId, $"{voteStats}\nVote on [c][cc0000]{Configuration.Current.ServerVotingHomepage}[-][/c] for the server.\n\nRewards (/votereward):" +
-                Configuration.Current.VotingRewards.Aggregate("\n", (S, R) => {
+                Configuration.Current.VotingRewards.Where(V => V.EveryXVotesGet > 0).Aggregate("\n", (S, R) => {
                     return S + $"every {R.EveryXVotesGet} vote{(R.EveryXVotesGet > 1 ? "s" : "")} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Description}, {s}") + "\n";
-                }) + 
+                }) +
+                Configuration.Current.VotingRewards.Where(V => V.ForVoteNumerXGet > 0).Aggregate("\n", (S, R) => {
+                    return S + $"for vote number {R.ForVoteNumerXGet} get " + R.Rewards.Aggregate("", (s, r) => $"{r.Count} {r.Description}, {s}") + "\n";
+                }) +
                 (Configuration.Current.VotingLottery?.Count == 0 ? "" :
                 "\nLottery (/votelottery):" +
                 Configuration.Current.VotingLottery.GroupBy(R => R.Id).Aggregate("\n", (S, R) => 
@@ -195,11 +198,16 @@ namespace VotingRewardMod
             bool getsome = false;
             if (Configuration.Current.Cumulative)
                 Configuration.Current.VotingRewards
-                    .Where(R => vote.Statistic.VoteForReward % R.EveryXVotesGet == 0)
+                    .Where(R => (R.EveryXVotesGet > 0 && vote.Statistic.VoteForReward % R.EveryXVotesGet == 0) || (R.ForVoteNumerXGet > 0 && vote.Statistic.VoteForReward == R.ForVoteNumerXGet))
                     .ToList()
                     .ForEach(Rs => getsome = GivePlayerRewards(player, Rs.Rewards) || getsome);
-            else getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
-                    .Last(R => vote.Statistic.VoteForReward % R.EveryXVotesGet == 0).Rewards);
+            else
+            {
+                getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
+                    .LastOrDefault(R => (R.EveryXVotesGet > 0 && vote.Statistic.VoteForReward % R.EveryXVotesGet == 0)).Rewards);
+                getsome = GivePlayerRewards(player, Configuration.Current.VotingRewards
+                    .FirstOrDefault(R => R.ForVoteNumerXGet > 0 && vote.Statistic.VoteForReward == R.ForVoteNumerXGet).Rewards) || getsome;
+            }
 
             await MarkRewardClaimed(player);
 
@@ -302,6 +310,14 @@ namespace VotingRewardMod
                 config.VotingApiServerKey = "Get yours from https://empyrion-servers.com/ or your server voting provider";
                 config.Cumulative = true;
                 config.VotingRewards = new[] {
+                    new RewardModConfiguration.VotingReward() {
+                        ForVoteNumerXGet = 1,
+                        Rewards = new[]
+                        {
+                            new RewardModConfiguration.VoteReward() { Id = 4346, Description = "Gold Ingot", Count = 500 },
+                            new RewardModConfiguration.VoteReward() { Id = 4421, Description = "Fusion Cell", Count = 500 },
+                        }.ToList(),
+                    },
                     new RewardModConfiguration.VotingReward() {
                         EveryXVotesGet = 1,
                         Rewards = new[]
