@@ -76,6 +76,7 @@ namespace VotingRewardMod
             {
                 r.Id = id;
             }
+            else r.Id = 0;
         }
 
         private static void UpdateToNewConfigurationFormat(RewardModConfiguration.VoteReward r)
